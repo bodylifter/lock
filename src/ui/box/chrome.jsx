@@ -51,27 +51,11 @@ const MESSAGE_ANIMATION_DURATION = 250;
 const AUXILIARY_ANIMATION_DURATION = 350;
 
 export default class Chrome extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { moving: false, reverse: false };
-  }
-
   componentWillReceiveProps(nextProps) {
     const { auxiliaryPane, showSubmitButton } = this.props;
-    const { delayingShowSubmitButton } = this.state;
-
-    if (!showSubmitButton && nextProps.showSubmitButton && !delayingShowSubmitButton) {
-      this.setState({ delayingShowSubmitButton: true });
-    }
 
     if (!auxiliaryPane && nextProps.auxiliaryPane) {
       this.auxiliaryPaneTriggerInput = global.document.activeElement;
-      this.setState({ moving: true });
-    }
-
-    if (auxiliaryPane && !nextProps.auxiliaryPane) {
-      // TODO clear timeout
-      setTimeout(() => this.setState({ moving: false }), AUXILIARY_ANIMATION_DURATION + 50);
     }
   }
 
@@ -105,34 +89,12 @@ export default class Chrome extends React.Component {
 
       if (input) {
         if (this.mainScreenName(prevProps.screenName) !== this.mainScreenName()) {
-          this.inputToFocus = input;
+          input.focus();
         } else {
           // TODO clear timeout
           setTimeout(() => input.focus(), 17);
         }
       }
-    }
-  }
-
-  onWillSlide() {
-    this.setState({ moving: true });
-    this.sliding = true;
-  }
-
-  onDidSlide() {
-    this.sliding = false;
-    this.setState({ reverse: false });
-  }
-
-  onDidAppear() {
-    this.setState({ moving: false });
-    if (this.state.delayingShowSubmitButton) {
-      this.setState({ delayingShowSubmitButton: false });
-    }
-
-    if (this.inputToFocus) {
-      this.inputToFocus.focus();
-      delete this.inputToFocus;
     }
   }
 
@@ -176,8 +138,6 @@ export default class Chrome extends React.Component {
       scrollGlobalMessagesIntoView
     } = this.props;
 
-    const { delayingShowSubmitButton, moving, reverse } = this.state;
-
     let backgroundUrl, name;
     if (avatar) {
       backgroundUrl = avatar;
@@ -189,7 +149,6 @@ export default class Chrome extends React.Component {
 
     const submitButton =
       showSubmitButton &&
-      !delayingShowSubmitButton &&
       <SubmitButton
         color={primaryColor}
         disabled={disableSubmitButton}
@@ -224,8 +183,6 @@ export default class Chrome extends React.Component {
     const Content = contentComponent;
 
     let className = 'auth0-lock-cred-pane';
-    const isQuiet = !moving && !delayingShowSubmitButton;
-    className += isQuiet ? ' auth0-lock-quiet' : ' auth0-lock-moving';
 
     return (
       <div className={className}>
@@ -246,15 +203,7 @@ export default class Chrome extends React.Component {
           {globalError}
         </ReactCSSTransitionGroup>
         <div style={{ position: 'relative' }}>
-          <MultisizeSlide
-            delay={550}
-            onDidAppear={::this.onDidAppear}
-            onDidSlide={::this.onDidSlide}
-            onWillSlide={::this.onWillSlide}
-            transitionName={transitionName}
-            reverse={reverse}
-          >
-            <div key={this.mainScreenName()} className="auth0-lock-view-content">
+          <div key={this.mainScreenName()} className="auth0-lock-view-content">
               <div style={{ position: 'relative' }}>
                 <div className="auth0-lock-body-content">
                   <div className="auth0-lock-content">
@@ -266,7 +215,6 @@ export default class Chrome extends React.Component {
                 </div>
               </div>
             </div>
-          </MultisizeSlide>
         </div>
         {submitButton}
         <ReactCSSTransitionGroup
@@ -286,10 +234,7 @@ export default class Chrome extends React.Component {
   }
 
   handleBack() {
-    if (this.sliding) return;
-
     const { backHandler } = this.props;
-    this.setState({ reverse: true });
     backHandler();
   }
 }
